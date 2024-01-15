@@ -1,0 +1,226 @@
+
+first of all make a folder where you write your backend code
+
+first install express
+npm install exprees
+
+then make the main file (server.js)
+
+const express = require("express");
+
+and then make an exress app 
+
+const app = express();
+
+then make a middleware for accesing routes 
+
+//middleware
+app.use(express.json());
+app.use((req, res, next) => {
+  console.log(req.path, req.method);
+  next();
+});
+
+
+and then connect to the routes
+
+const workoutRoutes = require("./routes/workouts");
+
+//routes
+
+app.use("/api/workouts", workoutRoutes);
+
+
+/api/workouts -> it is a url where you can start to get,post,patch,delete  requests.
+
+workoutRoutes is a js file where i defined my routes.
+
+
+
+
+connect to mongodb 
+
+install mongoose
+
+npm install mongoose
+
+and then connect backend to the mongodb
+
+const mongoose = require("mongoose");
+
+// connect to db
+
+mongoose
+  .connect(process.env.MONG_URI)
+  .then(() => {
+    app.listen(process.env.PORT, () => {
+      console.log("Connected to db & lisitening on port", process.env.PORT);
+    });
+  })
+  .catch((error) => {
+    console.log(error);
+  });
+
+
+install env file
+
+npm install dotenv
+
+and make the file .env
+
+and give them port which port you want to run your api
+
+and also defined connection_string in that 
+
+PORT=4000
+MONG_URI = mongodb://localhost:27017/MERN
+
+
+------------------------------------------
+
+//Making models or making schema
+const mongoose = require('mongoose')
+
+const Schema = mongoose.Schema
+
+const workoutSchema = new Schema({
+    title:{
+        type:String,
+        required:true
+    },
+    reps :{
+        type:Number,
+        required:true
+    },
+    load:{
+        type:Number,
+        required:true
+    }
+},{ timestamps:true })
+
+module.exports = mongoose.model('Workout',workoutSchema)
+
+
+
+
+
+//Making Routers 
+
+
+const express = require('express')
+const {createWorkout,getWorkout,getWorkouts,deleteWorkout,updateWorkout} = require('../controller/workoutController')   // it is get from controller where all request are handle 
+const router = express.Router()
+
+// GET all workouts
+router.get('/', getWorkouts)
+
+// GET single workouts
+router.get('/:id', getWorkout)
+
+// POST a New Workout
+router.post('/',createWorkout)
+
+// DELETE a new workout
+router.delete('/:id', deleteWorkout)
+
+// UPDATE a new workout
+router.patch('/:id', updateWorkout)
+
+module.exports = router
+
+
+--------------------------------------
+
+This is a controller for all the request handle by this 
+
+const Workout = require('../models/workoutModel')
+const mongoose = require('mongoose')
+
+// get all workouts
+const getWorkouts = async (req,res) =>{
+    const workouts = await Workout.find({}).sort({createdAt:-1})
+
+    res.status(200).json(workouts)
+}
+
+
+// get a single workouts
+const getWorkout = async(req,res)=>{
+    const {id} = req.params
+
+    if(!mongoose.Types.ObjectId.isValid(id)){
+        return res.status(404).json({error:'No Such Workout'})
+    }
+    const workout = await Workout.findById(id)
+
+    if(!workout){
+        return res.status(404).json({error :'No Such Workout'})
+    }
+
+    res.status(200).json(workout)
+}
+
+
+// create a new workout 
+
+const createWorkout = async(req,res)=>{
+    const { title , load , reps } = req.body
+
+    // add doc to db
+    try{
+        const workout = await Workout.create({title,load,reps})
+        res.status(200).json(workout)
+
+    }catch(error){
+        res.status(400).json({error: error.message})
+    }
+}
+
+
+
+// delete a workout 
+
+const deleteWorkout = async(req,res)=>{
+    const {id} = req.params
+    
+    if(!mongoose.Types.ObjectId.isValid(id)){
+        return res.status(404).json({error:'No Such Workout'})
+    }
+
+    const workout = await Workout.findOneAndDelete({_id:id})
+
+    if(!workout){
+        return res.status(400).json({error :'No Such Workout'})
+    }    
+
+    res.status(200).json(workout)
+
+}
+
+// update a workout 
+
+const updateWorkout  = async(req,res) =>{
+    const {id} = req.params
+    
+    if(!mongoose.Types.ObjectId.isValid(id)){
+        return res.status(404).json({error:'No Such Workout'})
+    }
+
+    const workout = await Workout.findByIdAndUpdate({_id:id},{
+        ...req.body
+    })
+
+    if(!workout){
+        return res.status(400).json({error :'No Such Workout'})
+    }
+    res.status(200).json(workout)
+} 
+
+
+module.exports ={
+    getWorkout,
+    getWorkouts,
+    createWorkout,
+    deleteWorkout,
+    updateWorkout,
+}
